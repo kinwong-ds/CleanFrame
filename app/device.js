@@ -22,6 +22,8 @@
     'ZODRT12q2l.WebAccountExtension', 'ByJlgt0XeD.CastSettingsApp', 'tv6pbVMQFF.PrivacyChoices'];
   // Samsung's viewer shows the last-used input; list it under a plain name.
   var INPUT = 'org.tizen.tv-viewer', INPUT_NAME = 'TV input';
+  // Fixed inputs switch the main source, then open the viewer. Owner's label for HDMI 1.
+  var SOURCE = /^input\.([A-Z]+)([0-9]{1,2})$/, SOURCE_NAMES = { HDMI1: 'PC' };
   var SELF = 'nClrkHome1.FrameHome';
   function api() { return window.tizen && window.tizen.application; }
   function selfId() {
@@ -40,10 +42,45 @@
     return finish;
   }
   function launchApp(id, done) {
+    var input = SOURCE.exec(id);
+    if (input) { launchInput(input[1], Number(input[2]), done); return; }
     if (!api()) { unavailable(done); return; }
     var finish = bounded(done);
     try { api().launch(id, function () { finish(null); }, function (err) { finish(failure(err)); }); }
     catch (err) { finish(failure(err)); }
+  }
+  function sources(ok, fail) {
+    tizen.systeminfo.getPropertyValue('VIDEOSOURCE', function (info) {
+      ok((info.connected || []).concat(info.disconnected || []));
+    }, fail);
+  }
+  function sourceEntries(list) {
+    var seen = {}, count = {}, result = [];
+    list.forEach(function (src) { count[src.type] = (count[src.type] || 0) + 1; });
+    list.forEach(function (src) {
+      var key = src.type + src.number;
+      if (seen[key] || !/^[A-Z]+$/.test(src.type) || !(src.number >= 0 && src.number < 100)) return;
+      seen[key] = true;
+      result.push({ appId: 'input.' + key, name: SOURCE_NAMES[key] || (count[src.type] > 1 ? src.type + ' ' + src.number : src.type), brand: '', icon: '', rank: 25 });
+    });
+    return result;
+  }
+  function launchInput(type, number, done) {
+    if (!api() || !window.tizen.systeminfo || !window.tizen.tvwindow) { unavailable(done); return; }
+    var finish = bounded(done);
+    try {
+      sources(function (list) {
+        var src = list.filter(function (s) { return s.type === type && s.number === number; })[0];
+        if (!src) { finish({ message: 'This input is not available on this screen.' }); return; }
+        tizen.tvwindow.setSource(src, function () {
+          api().launch(INPUT, function () {
+            finish(null);
+            // The viewer can stay behind CleanFrame when it was already running.
+            setTimeout(function () { try { api().getCurrentApplication().hide(); } catch (err) { /* stays visible */ } }, 300);
+          }, function (err) { finish(failure(err)); });
+        }, function (err) { finish(failure(err)); }, 'MAIN');
+      }, function (err) { finish(failure(err)); });
+    } catch (err) { finish(failure(err)); }
   }
   function launch(brand, done) {
     if (!IDS[brand]) { done({message: 'This app has no launch target.'}); return; }
@@ -82,8 +119,18 @@
           seen[a.id] = true;
           result.push({ appId: a.id, name: a.name, brand: known[a.id] || EXTRA_BRANDS[a.id] || '', icon: a.iconPath || '', rank: primary ? Object.keys(IDS).indexOf(known[a.id]) : (stream ? 20 : 30) });
         });
-        result.sort(function (a, b) { return a.rank - b.rank || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
-        finish(null, result);
+        function sorted(list) {
+          list.sort(function (a, b) { return a.rank - b.rank || a.name.toLowerCase().localeCompare(b.name.toLowerCase()); });
+          finish(null, list);
+        }
+        // Screens that report their inputs list each one instead of the last-used viewer.
+        if (!window.tizen.systeminfo || !window.tizen.tvwindow || !seen[INPUT]) { sorted(result); return; }
+        try {
+          sources(function (list) {
+            var inputs = sourceEntries(list);
+            sorted(inputs.length ? result.filter(function (a) { return a.appId !== INPUT; }).concat(inputs) : result);
+          }, function () { sorted(result); });
+        } catch (err) { sorted(result); }
       }, function (err) { finish(failure(err)); });
     } catch (err) { finish(failure(err)); }
   }
