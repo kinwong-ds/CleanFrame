@@ -86,6 +86,14 @@ test('the hidden TV viewer is listed once as TV input without its system icon', 
   assert.equal(JSON.stringify(apps.map(a => [a.appId, a.name, a.icon])), JSON.stringify([['org.tizen.tv-viewer', 'TV input', '']]));
 });
 
+test('the hidden menu app is listed as Picture settings', () => {
+  const h = harness();
+  let apps;
+  h.device.apps((error, value) => { assert.equal(error, null); apps = value; });
+  h.requests[0].ok([{ id: 'org.tizen.menu', name: 'menu', show: false, iconPath: '/usr/share/icons/menu.png' }, { id: 'org.tizen.menu', name: 'menu', show: false }]);
+  assert.equal(JSON.stringify(apps.map(a => [a.appId, a.name, a.icon])), JSON.stringify([['org.tizen.menu', 'Picture settings', '']]));
+});
+
 const MONITOR = {
   connected: [{ type: 'HDMI', number: 1, editName: 'PC' }],
   disconnected: [{ type: 'HDMI', number: 2, editName: null }, { type: 'DP', number: 1, editName: 'PC' }]

@@ -22,6 +22,8 @@
     'ZODRT12q2l.WebAccountExtension', 'ByJlgt0XeD.CastSettingsApp', 'tv6pbVMQFF.PrivacyChoices'];
   // Samsung's viewer shows the last-used input; list it under a plain name.
   var INPUT = 'org.tizen.tv-viewer', INPUT_NAME = 'TV input';
+  // Hidden system screens offered as shortcuts. The menu app opens Picture settings.
+  var SYSTEM_NAMES = { 'org.tizen.tv-viewer': INPUT_NAME, 'org.tizen.menu': 'Picture settings' };
   // Fixed inputs switch the main source, then open the viewer. Owner's label for HDMI 1.
   var SOURCE = /^input\.([A-Z]+)([0-9]{1,2})$/, SOURCE_NAMES = { HDMI1: 'PC' };
   var SELF = 'nClrkHome1.FrameHome';
@@ -106,8 +108,8 @@
         var known = {}, seen = {}, result = [], self = selfId();
         Object.keys(IDS).forEach(function (brand) { known[IDS[brand]] = brand; });
         list.forEach(function (a) {
-          if (a.id === INPUT) {
-            if (!seen[a.id]) result.push({ appId: a.id, name: INPUT_NAME, brand: '', icon: '', rank: 25 });
+          if (SYSTEM_NAMES[a.id]) {
+            if (!seen[a.id]) result.push({ appId: a.id, name: SYSTEM_NAMES[a.id], brand: '', icon: '', rank: 25 });
             seen[a.id] = true;
             return;
           }

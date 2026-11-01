@@ -26,7 +26,7 @@ Placeholders are written as `<LIKE_THIS>`.
 | OS / CPU | Tizen 6.5.0, ARMv7, 32-bit |
 | Mac | Apple Silicon (arm64), macOS |
 | CleanFrame | Owner's own signed build installed, launched and confirmed on screen |
-| Shortcuts | YouTube and two inputs — **DP** and **PC** (HDMI 1) — set in the in-app editor |
+| Shortcuts | YouTube, two inputs — **DP** and **PC** (HDMI 1) — and **Picture settings**, set in the in-app editor |
 | Home button | Apply → physical Home opened CleanFrame, confirmed |
 | Still untested | Power-on destination after the change, behaviour after certificate expiry |
 
@@ -196,6 +196,21 @@ The port names shown in CleanFrame come from the code (`SOURCE_NAMES`), because
 the monitor's own `editName` was "PC" for two different ports. Adjust that map
 for another monitor's ports and labels.
 
+### Picture settings shortcut
+
+The monitor's Settings app (`com.samsung.tv.coba.setting`) reports a successful
+launch but never comes onto the screen, whether launched from an app or with
+`sdb shell 0 execute`. The hidden system app `org.tizen.menu` does: launched
+either way, it opened the **Picture** menu every time, including after the owner
+had last used a different Settings page. CleanFrame lists it as
+**Picture settings**, and Eye Saver Mode is a few presses away under Eye Care.
+
+Setting Eye Saver Mode directly is not possible from CleanFrame. The public
+`webapis.tvinfo` menu keys cover only captions, accessibility, audio language
+and UI timeout; `webapis.avinfo` has picture setters but no Eye Saver; and
+`webapis.productinfo.setSystemConfig` returns a permission error without a
+partner certificate.
+
 ## Stage 7 — Home button (native Home)
 
 **Higher risk; get explicit approval before applying.** As on the TV, the
@@ -287,6 +302,7 @@ keeping the recovery folder and certificate backup off the Mac.
 - [ ] Per-device signing/device config selected before `npm run package`
 - [ ] `npm run check`, `package`, `tv:install`, `tv:launch`; CleanFrame seen on screen
 - [ ] Inputs probed (`VIDEOSOURCE`); port name map adjusted; DP/PC/HDMI shortcuts added
+- [ ] `sdb shell 0 execute org.tizen.menu` opens Picture on screen before adding Picture settings
 - [ ] Private helper copy in its own folder (model, firmware, **framework** after inspect) and built
 - [ ] Inspect → query → save snapshot → back up outside the repo
 - [ ] Apply → physical Home check → restore path known
