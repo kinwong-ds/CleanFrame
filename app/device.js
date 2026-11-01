@@ -20,6 +20,8 @@
   var INTERNAL = ['adplatform.ADPlayer', 'WykOS4t4F0.cmsWebApp', '25emanual3.emanual',
     'd0m1lV1nt2.emanual', '2022ePop01.SmartTV',
     'ZODRT12q2l.WebAccountExtension', 'ByJlgt0XeD.CastSettingsApp', 'tv6pbVMQFF.PrivacyChoices'];
+  // Samsung's viewer shows the last-used input; list it under a plain name.
+  var INPUT = 'org.tizen.tv-viewer', INPUT_NAME = 'TV input';
   var SELF = 'nClrkHome1.FrameHome';
   function api() { return window.tizen && window.tizen.application; }
   function selfId() {
@@ -67,6 +69,11 @@
         var known = {}, seen = {}, result = [], self = selfId();
         Object.keys(IDS).forEach(function (brand) { known[IDS[brand]] = brand; });
         list.forEach(function (a) {
+          if (a.id === INPUT) {
+            if (!seen[a.id]) result.push({ appId: a.id, name: INPUT_NAME, brand: '', icon: '', rank: 25 });
+            seen[a.id] = true;
+            return;
+          }
           var primary = !!known[a.id], stream = STREAMING.indexOf(a.id) >= 0;
           var consumer = /^[A-Za-z0-9]{10}\.[A-Za-z0-9_-]+$/.test(a.id) || CONSUMER_SYSTEM.indexOf(a.id) >= 0;
           if (a.id === self || INTERNAL.indexOf(a.id) >= 0 || seen[a.id] || !a.name || (!primary && !stream && (!a.show || !consumer))) return;

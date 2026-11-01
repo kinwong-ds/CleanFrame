@@ -70,6 +70,18 @@ test('regional streaming apps stay distinct and system helpers stay hidden', () 
   assert.equal(apps.find(a => a.name === 'HBO Max').brand, 'hbomax');
 });
 
+test('the hidden TV viewer is listed once as TV input without its system icon', () => {
+  const h = harness();
+  let apps;
+  h.device.apps((error, value) => { assert.equal(error, null); apps = value; });
+  h.requests[0].ok([
+    { id: 'org.tizen.tv-viewer', name: 'tv-viewer', show: false, iconPath: '/usr/share/icons/viewer.png' },
+    { id: 'org.tizen.tv-viewer', name: 'tv-viewer', show: false },
+    { id: 'org.tizen.tv-viewer-sub1', name: 'tv-viewer-sub1', show: false }
+  ]);
+  assert.equal(JSON.stringify(apps.map(a => [a.appId, a.name, a.icon])), JSON.stringify([['org.tizen.tv-viewer', 'TV input', '']]));
+});
+
 test('launch keeps its eight-second deadline independently of discovery', () => {
   const h = harness(), results = [];
   h.device.launchApp('Synthetic.App', error => results.push(error));
