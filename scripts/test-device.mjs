@@ -7,7 +7,7 @@ import test from 'node:test';
 const source = readFileSync(new URL('../app/device.js', import.meta.url), 'utf8');
 function harness(screen) {
   let now = 0, next = 0;
-  const timers = new Map(), requests = [], launches = [], switches = [], hidden = [];
+  const timers = new Map(), requests = [], launches = [], switches = [], hidden = [], listeners = [], document = { hidden: false };
   const application = {
     getCurrentApplication: () => ({ appInfo: { id: 'Owner12345.Home' }, hide: () => hidden.push(now) }),
     getAppsInfo: (ok, fail) => requests.push({ ok, fail }),
@@ -15,11 +15,14 @@ function harness(screen) {
   };
   const window = { tizen: { application } };
   if (screen) {
-    window.tizen.systeminfo = { getPropertyValue: (name, ok) => { assert.equal(name, 'VIDEOSOURCE'); ok(screen); } };
+    window.tizen.systeminfo = {
+      getPropertyValue: (name, ok) => { assert.equal(name, 'VIDEOSOURCE'); ok(screen); },
+      addPropertyValueChangeListener: (name, listener) => { assert.equal(name, 'VIDEOSOURCE'); listeners.push(listener); }
+    };
     window.tizen.tvwindow = { setSource: (source, ok, fail, type) => switches.push({ source, ok, fail, type }) };
   }
   vm.runInNewContext(source, {
-    window, tizen: window.tizen,
+    window, tizen: window.tizen, document,
     setTimeout: (callback, delay) => { const id = ++next; timers.set(id, { callback, at: now + delay }); return id; },
     clearTimeout: id => timers.delete(id)
   });
@@ -27,7 +30,7 @@ function harness(screen) {
     now += ms;
     for (const [id, timer] of timers) if (timer.at <= now) { timers.delete(id); timer.callback(); }
   }
-  return { device: window.FrameDevice, requests, launches, switches, hidden, advance };
+  return { device: window.FrameDevice, requests, launches, switches, hidden, listeners, document, advance };
 }
 
 test('a 500-app catalogue can arrive after the old eight-second deadline', () => {
@@ -126,6 +129,27 @@ test('a missing input reports an error without switching', () => {
   h.device.launchApp('input.HDMI3', error => results.push(error));
   assert.equal(h.switches.length, 0);
   assert.match(results[0].message, /not available/);
+});
+
+const UNPLUGGED = { connected: [{ type: 'HDMI', number: 1 }], disconnected: [{ type: 'HDMI', number: 2 }, { type: 'DP', number: 1 }] };
+const PLUGGED = { connected: [{ type: 'HDMI', number: 1 }, { type: 'DP', number: 1 }], disconnected: [{ type: 'HDMI', number: 2 }] };
+
+test('an input plugged in while CleanFrame is in front opens once', () => {
+  const h = harness(UNPLUGGED), opened = [];
+  h.device.watchInputs(id => opened.push(id));
+  h.listeners[0](PLUGGED);
+  h.listeners[0](PLUGGED);
+  assert.deepEqual(opened, ['input.DP1']);
+});
+
+test('inputs plugged in or removed behind another screen do not open', () => {
+  const h = harness(UNPLUGGED), opened = [];
+  h.device.watchInputs(id => opened.push(id));
+  h.document.hidden = true;
+  h.listeners[0](PLUGGED);
+  h.document.hidden = false;
+  h.listeners[0](UNPLUGGED);
+  assert.deepEqual(opened, []);
 });
 
 test('launch keeps its eight-second deadline independently of discovery', () => {

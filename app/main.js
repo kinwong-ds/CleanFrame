@@ -1890,4 +1890,5 @@
   initialise();
   setLook({}, { transient: true, startup: true });
   norm(); render(); fit(); focusStage(); updateClock(); syncRotation();
+  FrameDevice.watchInputs(function (id) { perform('Input', function (done) { FrameDevice.launchApp(id, done); }); });
 })();

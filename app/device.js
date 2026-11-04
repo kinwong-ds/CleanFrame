@@ -84,6 +84,24 @@
       }, function (err) { finish(failure(err)); });
     } catch (err) { finish(failure(err)); }
   }
+  // Like Samsung's Auto Source Switch: an input plugged in while CleanFrame is in front opens.
+  function watchInputs(open) {
+    if (!api() || !window.tizen.systeminfo || !window.tizen.tvwindow) return;
+    var known = null;
+    function keys(info) {
+      var out = {};
+      (info.connected || []).forEach(function (src) { out[src.type + src.number] = true; });
+      return out;
+    }
+    try {
+      tizen.systeminfo.getPropertyValue('VIDEOSOURCE', function (info) { known = keys(info); }, function () {});
+      tizen.systeminfo.addPropertyValueChangeListener('VIDEOSOURCE', function (info) {
+        var now = keys(info), added = known ? Object.keys(now).filter(function (key) { return !known[key]; }) : [];
+        known = now;
+        if (added.length === 1 && !document.hidden && SOURCE.test('input.' + added[0])) open('input.' + added[0]);
+      });
+    } catch (err) { /* this screen does not report its inputs */ }
+  }
   function launch(brand, done) {
     if (!IDS[brand]) { done({message: 'This app has no launch target.'}); return; }
     launchApp(IDS[brand], done);
@@ -136,5 +154,5 @@
       }, function (err) { finish(failure(err)); });
     } catch (err) { finish(failure(err)); }
   }
-  window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, home: home, settings: settings, apps: apps };
+  window.FrameDevice = { launch: launch, launchApp: launchApp, art: art, home: home, settings: settings, apps: apps, watchInputs: watchInputs };
 }());

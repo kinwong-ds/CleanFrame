@@ -196,6 +196,25 @@ The port names shown in CleanFrame come from the code (`SOURCE_NAMES`), because
 the monitor's own `editName` was "PC" for two different ports. Adjust that map
 for another monitor's ports and labels.
 
+### Plugging in a laptop opens its input
+
+Before CleanFrame, plugging the laptop into DP showed the laptop. With CleanFrame
+as Home, the monitor showed CleanFrame instead: unplugging the current input
+brings up Home, and Samsung's own switch back no longer happens. CleanFrame now
+watches `VIDEOSOURCE` with `tizen.systeminfo.addPropertyValueChangeListener` and,
+when exactly one input newly connects while CleanFrame is in front, opens it the
+same way as the DP/PC shortcuts. Tested on this monitor:
+
+- CleanFrame on screen, DP unplugged and plugged back in: the event arrived and
+  the laptop showed about a second later.
+- Monitor turned on with the remote, DP already plugged in: CleanFrame showed
+  briefly, then switched to DP when the laptop's signal came up (about 8 s).
+- Monitor off with the remote, DP plugged in: the monitor stayed off. CleanFrame
+  cannot wake the screen.
+
+Events also arrive while CleanFrame is behind another screen; those are ignored.
+`tizen.tvwindow.addSourceChangeListener` does not exist on this firmware.
+
 ### Picture settings shortcut
 
 The monitor's Settings app (`com.samsung.tv.coba.setting`) reports a successful
@@ -302,6 +321,7 @@ keeping the recovery folder and certificate backup off the Mac.
 - [ ] Per-device signing/device config selected before `npm run package`
 - [ ] `npm run check`, `package`, `tv:install`, `tv:launch`; CleanFrame seen on screen
 - [ ] Inputs probed (`VIDEOSOURCE`); port name map adjusted; DP/PC/HDMI shortcuts added
+- [ ] Unplug and replug an input with CleanFrame in front; it should open that input
 - [ ] `sdb shell 0 execute org.tizen.menu` opens Picture on screen before adding Picture settings
 - [ ] Private helper copy in its own folder (model, firmware, **framework** after inspect) and built
 - [ ] Inspect → query → save snapshot → back up outside the repo
